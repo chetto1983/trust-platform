@@ -486,6 +486,11 @@ impl Runtime {
         self.set_debug_control(control.clone());
         control
     }
+    /// Disable debugging: cycles run without the statement hook again, as before `enable_debug`. Handles to the
+    /// dropped control no longer reach this runtime.
+    pub fn disable_debug(&mut self) {
+        self.state.services_mut().set_debug_control(None);
+    }
     /// Get the existing control handle without acquiring execution storage.
     pub fn debug_control(&self) -> Option<DebugControl> {
         self.state.services().debug_control().cloned()

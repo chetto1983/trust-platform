@@ -356,3 +356,41 @@ END_PROGRAM
     control.continue_run();
     handle.join().unwrap();
 }
+
+#[test]
+fn disable_debug_runs_cycles_without_the_hook() {
+    let main = r#"PROGRAM Main
+VAR
+    Count : INT := 0;
+END_VAR
+    Count := Count + 1;
+END_PROGRAM
+"#;
+    let session = CompileSession::from_sources(vec![SourceFile::with_path("main.st", main)]);
+    let mut runtime = session.build_runtime().unwrap();
+    let location = resolve_location(&runtime, main, 0, "Count := Count + 1");
+    let control = runtime.enable_debug();
+    let (stop_tx, stop_rx) = channel();
+    control.set_stop_sender(stop_tx);
+    control.set_breakpoints_for_file(0, vec![DebugBreakpoint::new(location)]);
+
+    runtime.disable_debug();
+    assert!(runtime.debug_control().is_none());
+
+    let runtime = Arc::new(Mutex::new(runtime));
+    let cycling = runtime.clone();
+    let handle = thread::spawn(move || {
+        cycling
+            .lock()
+            .expect("runtime lock poisoned")
+            .execute_cycle()
+            .unwrap();
+    });
+    let stopped = stop_rx.recv_timeout(Duration::from_millis(500));
+    control.continue_run();
+    handle.join().unwrap();
+    assert!(
+        stopped.is_err(),
+        "the dropped control's breakpoint stopped the cycle"
+    );
+}
