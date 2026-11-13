@@ -28,7 +28,15 @@ jobs:
         with:
           toolchain: 1.99.0
       - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+      # Each step fails when its filter selects no test: the first filter, host::debug::breakpoints, selected none of
+      # 4083 and passed (run 43433778147). lib.rs mounts host/debug as `debug`.
       - name: breakpoints.rs unit tests
-        run: cargo test --locked -p trust-runtime --lib host::debug::breakpoints
+        run: |
+          set -o pipefail
+          cargo test --locked -p trust-runtime --lib debug::breakpoints:: | tee "$RUNNER_TEMP/unit.log"
+          grep -qE "test result: ok\. [1-9][0-9]* passed" "$RUNNER_TEMP/unit.log"
       - name: tests/debug_stepping.rs
-        run: cargo test --locked -p trust-runtime --test debug_stepping
+        run: |
+          set -o pipefail
+          cargo test --locked -p trust-runtime --test debug_stepping | tee "$RUNNER_TEMP/stepping.log"
+          grep -qE "test result: ok\. [1-9][0-9]* passed" "$RUNNER_TEMP/stepping.log"
