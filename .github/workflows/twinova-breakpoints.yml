@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # .cargo/config.toml wraps rustc in sccache, which the runner lacks; truST's ci.yml empties the wrapper the same way.
+  RUSTC_WRAPPER: ""
+
 jobs:
   breakpoints:
     runs-on: ubuntu-24.04
