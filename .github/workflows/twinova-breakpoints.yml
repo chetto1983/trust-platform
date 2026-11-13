@@ -1,0 +1,30 @@
+name: Twinova breakpoint rule
+
+# Twinova (chetto1983/Twinova, ROADMAP 4.9) builds against this branch: truST at 6405915, the last commit with the
+# bytecode VM, plus upstream c9635b1c's breakpoint matching rule ported by hand. This job compiles trust-runtime at the
+# branch's head and runs only the tests that rule touches: breakpoints.rs's unit tests and tests/debug_stepping.rs.
+# truST's own workflows run on main and master only, so they stay off these branches.
+on:
+  push:
+    branches: ["twinova/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  breakpoints:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: 1.99.0
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+      - name: breakpoints.rs unit tests
+        run: cargo test --locked -p trust-runtime --lib host::debug::breakpoints
+      - name: tests/debug_stepping.rs
+        run: cargo test --locked -p trust-runtime --test debug_stepping
